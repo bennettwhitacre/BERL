@@ -1,0 +1,65 @@
+Screen {
+    layout: vertical;
+}
+
+#token-wrap {
+    align: center middle;
+    height: 100%;
+}
+
+#token-panel {
+    width: 72;
+    height: auto;
+    border: round $primary;
+    padding: 1 2;
+}
+
+#top-bar, #action-bar, #filter-actions, #form-actions {
+    height: auto;
+    layout: horizontal;
+    padding: 0 1;
+}
+
+#path {
+    width: 1fr;
+    content-align: center middle;
+    text-style: bold;
+}
+
+#main-columns {
+    layout: horizontal;
+    height: 1fr;
+}
+
+.column {
+    width: 1fr;
+    border: round $surface;
+    margin: 0 1;
+    padding: 0 1;
+}
+
+DataTable {
+    height: 1fr;
+}
+
+Button {
+    margin: 0 1 0 0;
+}
+
+#upload {
+    text-style: bold;
+}
+
+.status {
+    height: 3;
+    padding: 0 1;
+    color: $text-muted;
+}
+
+.form-screen {
+    padding: 1 2;
+}
+
+Input, Select {
+    margin-bottom: 1;
+}

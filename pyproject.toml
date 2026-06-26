@@ -1,0 +1,29 @@
+[project]
+name = "berl"
+version = "0.1.0"
+description = "Ballchasing Easy Replay Loader"
+requires-python = ">=3.11"
+dependencies = [
+    "requests>=2.32",
+    "textual>=0.89",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.3",
+    "responses>=0.25",
+]
+
+[project.scripts]
+berl = "berl.app:main"
+
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+
+[tool.setuptools.package-data]
+berl = ["styles.tcss"]
