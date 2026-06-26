@@ -14,7 +14,7 @@ Screen {
     padding: 1 2;
 }
 
-#top-bar, #action-bar, #filter-actions, #form-actions {
+#top-bar, #action-bar, #filter-actions, #form-actions, #token-actions {
     height: auto;
     layout: horizontal;
     padding: 0 1;
@@ -22,8 +22,17 @@ Screen {
 
 #path {
     width: 1fr;
-    content-align: center middle;
+    content-align: left middle;
     text-style: bold;
+}
+
+#tier {
+    width: 24;
+}
+
+#direct-replays-only {
+    width: auto;
+    margin: 0 1 0 1;
 }
 
 #main-columns {
@@ -51,7 +60,7 @@ Button {
 }
 
 .status {
-    height: 3;
+    height: 1;
     padding: 0 1;
     color: $text-muted;
 }

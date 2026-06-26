@@ -6,7 +6,7 @@ from typing import Any
 from textual.app import ComposeResult
 from textual.containers import Container, Horizontal, Vertical
 from textual.screen import Screen
-from textual.widgets import Button, DataTable, Footer, Header, Label, Select, Static
+from textual.widgets import Button, Checkbox, DataTable, Footer, Header, Label, Select, Static
 
 from berl.models import ExplorerState
 from berl.screens.delete import DeleteGroupScreen, DeleteReplayScreen
@@ -32,7 +32,6 @@ class ExplorerScreen(Screen[None]):
             yield Button("Up", id="up")
             yield Button("Refresh", id="refresh")
             yield Button("Home", id="home")
-            yield Label("Home", id="path")
             yield Select(
                 [
                     ("Free", "free"),
@@ -49,6 +48,8 @@ class ExplorerScreen(Screen[None]):
             yield Button("Upload here", id="upload", variant="success")
             yield Button("Group filters", id="group-filters")
             yield Button("Replay filters", id="replay-filters")
+            yield Checkbox("Top-level replays only", value=self.app.state.direct_replays_only, id="direct-replays-only")
+            yield Label("Home", id="path")
         with Container(id="main-columns"):
             with Vertical(classes="column"):
                 yield Label("Groups")
@@ -111,12 +112,66 @@ class ExplorerScreen(Screen[None]):
                 replay_params["group"] = state.group_id
 
             self.groups = client.list_groups(**group_params).get("list", [])
-            self.replays = client.list_replays(**replay_params).get("list", [])
+            self.replays = self._load_replays(replay_params)
             self._fill_groups()
             self._fill_replays()
-            status.update(f"{len(self.groups)} groups, {len(self.replays)} replays")
+            mode = "top-level" if state.direct_replays_only or not state.group_id else "including subgroups"
+            status.update(f"{len(self.groups)} groups, {len(self.replays)} replays ({mode})")
         except Exception as exc:  # noqa: BLE001
             status.update(str(exc))
+
+    def _load_replays(self, replay_params: dict[str, Any]) -> list[dict[str, Any]]:
+        client = self.app.require_client()
+        state = self.app.state
+
+        direct_replays = client.list_replays(**replay_params).get("list", [])
+        if not state.group_id:
+            if state.direct_replays_only:
+                return [replay for replay in direct_replays if not replay.get("groups")]
+            return direct_replays
+
+        if state.direct_replays_only:
+            return direct_replays
+
+        replays: list[dict[str, Any]] = []
+        seen_replay_ids: set[str] = set()
+        for replay in direct_replays:
+            replay_id = replay.get("id")
+            if replay_id:
+                seen_replay_ids.add(replay_id)
+            replays.append(replay)
+
+        root_children = client.list_groups(
+            group=state.group_id,
+            count=200,
+            **{"sort-by": "created", "sort-dir": "desc"},
+        ).get("list", [])
+        groups_to_visit = [group["id"] for group in root_children if group.get("id")]
+        seen_group_ids: set[str] = set()
+
+        while groups_to_visit:
+            group_id = groups_to_visit.pop()
+            if group_id in seen_group_ids:
+                continue
+            seen_group_ids.add(group_id)
+
+            group_replays = client.list_replays(**{**replay_params, "group": group_id}).get("list", [])
+            for replay in group_replays:
+                replay_id = replay.get("id")
+                if replay_id and replay_id in seen_replay_ids:
+                    continue
+                if replay_id:
+                    seen_replay_ids.add(replay_id)
+                replays.append(replay)
+
+            children = client.list_groups(
+                group=group_id,
+                count=200,
+                **{"sort-by": "created", "sort-dir": "desc"},
+            ).get("list", [])
+            groups_to_visit.extend(child["id"] for child in children if child.get("id"))
+
+        return replays
 
     def _fill_groups(self) -> None:
         table = self.query_one("#groups", DataTable)
@@ -164,7 +219,12 @@ class ExplorerScreen(Screen[None]):
         if not group or not group.get("id"):
             return
         path = (*self.app.state.path, (group["id"], group.get("name", group["id"])))
-        self.app.go_to_state(ExplorerState(group_id=group["id"], path=path))
+        self.app.go_to_state(replace(self.app.state, group_id=group["id"], path=path))
+
+    def on_checkbox_changed(self, event: Checkbox.Changed) -> None:
+        if event.checkbox.id != "direct-replays-only":
+            return
+        self.app.go_to_state(replace(self.app.state, direct_replays_only=event.value))
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id != "tier" or event.value is Select.BLANK:

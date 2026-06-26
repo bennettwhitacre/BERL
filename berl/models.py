@@ -14,6 +14,7 @@ class ExplorerState:
     group_sort_dir: str = "desc"
     replay_sort_by: str = "upload-date"
     replay_sort_dir: str = "desc"
+    direct_replays_only: bool = True
 
     @property
     def display_path(self) -> str:
